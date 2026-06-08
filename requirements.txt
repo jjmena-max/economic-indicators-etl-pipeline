@@ -1,0 +1,9 @@
+# Core runtime dependencies
+requests>=2.31
+pandas>=2.2
+SQLAlchemy>=2.0
+pandera>=0.22
+PyYAML>=6.0
+
+# Postgres driver (used by docker-compose; SQLite needs nothing extra)
+psycopg2-binary>=2.9

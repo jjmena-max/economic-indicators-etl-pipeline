@@ -1,0 +1,26 @@
+[project]
+name = "econ-etl"
+version = "0.1.0"
+description = "Production-style ETL pipeline for World Bank macro-economic indicators."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Juan Jacobo Mena García" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"dags/*" = ["E402"]
+"scripts/*" = ["E402"]

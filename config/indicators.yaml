@@ -1,0 +1,29 @@
+# What to ingest. Edit freely — the pipeline reads this at runtime.
+# Indicator codes come from the World Bank Open Data catalogue:
+#   https://data.worldbank.org/indicator
+
+# ISO-3 country codes. COL = Colombia. Add more, e.g. [COL, MEX, CHL, PER, BRA].
+countries:
+  - COL
+  - MEX
+  - CHL
+  - PER
+
+# World Bank indicator code -> human-readable name stored alongside the data.
+indicators:
+  NY.GDP.MKTP.CD: "GDP (current US$)"
+  NY.GDP.MKTP.KD.ZG: "GDP growth (annual %)"
+  FP.CPI.TOTL.ZG: "Inflation, consumer prices (annual %)"
+  SL.UEM.TOTL.ZS: "Unemployment, total (% of labor force)"
+  NY.GNP.PCAP.CD: "GNI per capita, Atlas method (current US$)"
+  FR.INR.LEND: "Lending interest rate (%)"
+  BX.KLT.DINV.CD.WD: "Foreign direct investment, net inflows (BoP, current US$)"
+  GC.DOD.TOTL.GD.ZS: "Central government debt, total (% of GDP)"
+
+start_year: 2000
+end_year: 2023
+
+table_name: economic_indicators
+per_page: 1000
+request_timeout: 30
+max_retries: 3
