@@ -1,5 +1,6 @@
 # Economic Indicators ETL Pipeline
 
+[![CI](https://github.com/jjmena-max/economic-indicators-etl-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/jjmena-max/economic-indicators-etl-pipeline/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
