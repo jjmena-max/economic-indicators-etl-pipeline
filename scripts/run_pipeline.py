@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import tempfile
 from pathlib import Path
 
 # Make ``src`` importable when run directly from a clone (no install needed).
@@ -24,6 +25,7 @@ import pandas as pd  # noqa: E402
 from econ_etl.config import load_settings  # noqa: E402
 from econ_etl.db import make_engine  # noqa: E402
 from econ_etl.pipeline import run_pipeline  # noqa: E402
+from econ_etl.snapshot import snapshot_enabled, upload_snapshot  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -52,6 +54,23 @@ def main(argv: list[str] | None = None) -> int:
         df = pd.read_sql_table(settings.table_name, engine)
         df.to_csv(args.export, index=False)
         print(f"Exported {len(df)} rows to {args.export}")
+
+    # In the cloud (SNAPSHOT_ACCOUNT_URL set by the Azure job), keep a
+    # timestamped CSV copy of the curated table in Blob Storage for lineage.
+    if snapshot_enabled():
+        engine = make_engine(settings.database_url)
+        df = pd.read_sql_table(settings.table_name, engine)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, newline=""
+        ) as tmp:
+            df.to_csv(tmp.name, index=False)
+            tmp_path = tmp.name
+        try:
+            url = upload_snapshot(tmp_path)
+            if url:
+                print(f"Snapshotted {len(df)} rows to {url}")
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
 
     return 0
 

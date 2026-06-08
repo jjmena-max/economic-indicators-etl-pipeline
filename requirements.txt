@@ -7,3 +7,7 @@ PyYAML>=6.0
 
 # Postgres driver (used by docker-compose; SQLite needs nothing extra)
 psycopg2-binary>=2.9
+
+# Azure Blob snapshots — only imported at runtime when SNAPSHOT_ACCOUNT_URL is set
+azure-identity>=1.16
+azure-storage-blob>=12.20
