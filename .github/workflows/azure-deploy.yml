@@ -1,0 +1,77 @@
+name: Deploy to Azure
+
+# Provisions infrastructure (Bicep), builds the image in ACR, and runs the ETL
+# job once. Authentication uses GitHub OIDC federated credentials — no secrets
+# with passwords are stored, only the app/tenant/subscription IDs.
+#
+# Required repository secrets:
+#   AZURE_CLIENT_ID         app registration (federated) client id
+#   AZURE_TENANT_ID         Entra tenant id
+#   AZURE_SUBSCRIPTION_ID   target subscription id
+#   PG_ADMIN_PASSWORD       PostgreSQL admin password (strong)
+#
+# See docs/AZURE.md for the one-time setup that creates these.
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: Azure region
+        default: eastus
+        required: false
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write   # required for OIDC login
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-economic-indicators-etl
+  DEFAULT_LOCATION: eastus
+  IMAGE_NAME: econ-etl
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Resolve region
+        run: echo "LOCATION=${{ github.event.inputs.location || env.DEFAULT_LOCATION }}" >> "$GITHUB_ENV"
+
+      - name: Create resource group
+        run: az group create -n "$RESOURCE_GROUP" -l "$LOCATION" -o none
+
+      - name: Provision infrastructure (Bicep)
+        id: infra
+        run: |
+          outputs=$(az deployment group create \
+            -g "$RESOURCE_GROUP" \
+            -f infra/main.bicep \
+            -p infra/main.parameters.json \
+            -p location="$LOCATION" \
+            -p imageTag="${{ github.sha }}" \
+            -p pgAdminPassword="${{ secrets.PG_ADMIN_PASSWORD }}" \
+            --query properties.outputs -o json)
+          echo "acrName=$(echo "$outputs" | jq -r .acrName.value)"   >> "$GITHUB_OUTPUT"
+          echo "jobName=$(echo "$outputs" | jq -r .jobName.value)"   >> "$GITHUB_OUTPUT"
+
+      - name: Build & push image with ACR Tasks
+        run: |
+          az acr build \
+            -r "${{ steps.infra.outputs.acrName }}" \
+            -t "$IMAGE_NAME:${{ github.sha }}" \
+            -t "$IMAGE_NAME:latest" \
+            .
+
+      - name: Run the ETL job once
+        run: az containerapp job start -g "$RESOURCE_GROUP" -n "${{ steps.infra.outputs.jobName }}" -o none

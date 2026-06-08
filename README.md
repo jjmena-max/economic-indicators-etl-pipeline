@@ -91,6 +91,30 @@ runs the ETL against the database.
 `@monthly` DAG with per-stage retries (`extract → transform → load`). Drop it
 into your Airflow `dags/` folder (with `src/` on the `PYTHONPATH`) and enable it.
 
+## Deploy to Azure (Infrastructure as Code)
+
+The pipeline runs as a **managed, scheduled cloud job on Azure**, provisioned
+entirely from code — see [`docs/AZURE.md`](docs/AZURE.md) for the full guide.
+
+```bash
+az group create -n rg-economic-indicators-etl -l eastus
+az deployment group create -g rg-economic-indicators-etl \
+  -f infra/main.bicep -p infra/main.parameters.json \
+  -p pgAdminPassword='<strong-password>'
+```
+
+[`infra/main.bicep`](infra/main.bicep) declares a **Container Apps Job** (cron
+schedule — the cloud equivalent of the Airflow `@monthly` DAG) that pulls its
+image from **Azure Container Registry**, loads into **PostgreSQL Flexible
+Server**, and writes CSV snapshots to **Blob Storage (ADLS Gen2)** — all logged
+to **Log Analytics**. Image pull and storage access use a **managed identity**,
+so the only secret is the database password.
+
+CI/CD is wired in [`.github/workflows/azure-deploy.yml`](.github/workflows/azure-deploy.yml):
+it logs in with **GitHub OIDC** (no stored cloud passwords), provisions the
+infra, builds the image with `az acr build`, and runs the job — triggered by
+pushing a `v*` tag.
+
 ## Project layout
 
 ```
@@ -121,7 +145,9 @@ economic-indicators-etl-pipeline/
 ## Tech stack
 
 Python · pandas · SQLAlchemy · pandera · Requests · PyYAML · Apache Airflow ·
-Docker · pytest · ruff · GitHub Actions
+Docker · pytest · ruff · GitHub Actions · **Azure** (Bicep IaC · Container Apps
+Jobs · Container Registry · PostgreSQL Flexible Server · Blob Storage / ADLS Gen2
+· managed identity · OIDC)
 
 ## License
 
